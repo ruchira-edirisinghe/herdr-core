@@ -427,8 +427,18 @@ pub fn make_executable(_: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// conpty.dll starts the OpenConsole in the folder named for the machine's
+/// architecture, so each build ships the host for its own.
+#[cfg(not(target_arch = "aarch64"))]
+const CONPTY_HOST_DIR: &str = r"conpty\x64";
+#[cfg(target_arch = "aarch64")]
+const CONPTY_HOST_DIR: &str = r"conpty\arm64";
+
 /// The files of a release, as they sit beside herdr-core.exe.
+#[cfg(not(target_arch = "aarch64"))]
 const RELEASE: [&str; 3] = ["herdr-core.exe", r"conpty\conpty.dll", r"conpty\x64\OpenConsole.exe"];
+#[cfg(target_arch = "aarch64")]
+const RELEASE: [&str; 3] = ["herdr-core.exe", r"conpty\conpty.dll", r"conpty\arm64\OpenConsole.exe"];
 
 /// Puts the release whose herdr-core.exe is `from` where `dest`'s folder
 /// is. Windows won't overwrite a running file but will rename one: every
@@ -446,7 +456,7 @@ pub fn swap_in(from: &Path, dest: &Path, works: impl Fn(&Path) -> bool) -> io::R
         )
         .open(dir.join(".update.lock"))
     })?;
-    for leftover in [dir.to_path_buf(), dir.join("conpty"), dir.join(r"conpty\x64")]
+    for leftover in [dir.to_path_buf(), dir.join("conpty"), dir.join(CONPTY_HOST_DIR)]
         .iter()
         .filter_map(|d| std::fs::read_dir(d).ok())
         .flatten()
