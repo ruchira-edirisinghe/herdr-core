@@ -26,8 +26,12 @@ function Fail($why) { throw "hc: $why" }
 $releases = if ($env:HERDR_RELEASES_URL) { $env:HERDR_RELEASES_URL.TrimEnd("/") } else { "https://releases.herdr.dev" }
 $dir = if ($env:HC_INSTALL_DIR) { $env:HC_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\herdr-core" }
 $arch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
-if ($arch -ne "AMD64") { Fail "no build for $arch Windows yet (x64 only)" }
-$target = "windows-x86_64"
+# Releases are x64 only so far; a local ARM64 build installs from its zip.
+$target = switch ($arch) {
+    "AMD64" { "windows-x86_64" }
+    "ARM64" { "windows-aarch64" }
+    default { Fail "no build for $arch Windows yet" }
+}
 # Windows' own tar opens zips; Git Bash's, often first on PATH, can't.
 $tar = Join-Path $env:SystemRoot "System32\tar.exe"
 if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue) -or -not (Test-Path $tar)) {
